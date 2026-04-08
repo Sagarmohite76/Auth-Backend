@@ -1,7 +1,7 @@
 # =========================
 # Imports
 # =========================
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import (
     Column, Integer, String, DateTime, Enum, Float,
@@ -11,12 +11,14 @@ from sqlalchemy.orm import declarative_base, relationship, sessionmaker, Session
 from sqlalchemy.sql import func
 from datetime import datetime
 import enum
+import hashlib
+import random
 
 # =========================
-# Config (Replace with your DB URL)
+# Config
 # =========================
 class Config:
-    DATABASE_URL = "sqlite:///./test.db"  # Example, replace with your DB URL
+    DATABASE_URL = "sqlite:///./test.db"  # Replace with your DB
 
 # =========================
 # Base
@@ -31,7 +33,7 @@ class RoleEnum(enum.Enum):
     user = "user"
 
 # =========================
-# User Model
+# Models
 # =========================
 class User(Base):
     __tablename__ = "users"
@@ -43,18 +45,10 @@ class User(Base):
     role = Column(Enum(RoleEnum, name="user_role"), default=RoleEnum.user, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    students = relationship(
-        "Student",
-        back_populates="user",
-        cascade="all, delete"
-    )
+    students = relationship("Student", back_populates="user", cascade="all, delete")
 
-# =========================
-# Student Model
-# =========================
 class Student(Base):
     __tablename__ = 'students'
-
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
     full_name = Column(String(100), nullable=False)
@@ -66,12 +60,8 @@ class Student(Base):
     predictions = relationship("Prediction", back_populates="student", cascade="all, delete")
     performances = relationship("Performance", back_populates="student", cascade="all, delete")
 
-# =========================
-# Performance Model
-# =========================
 class Performance(Base):
     __tablename__ = 'performance'
-
     id = Column(Integer, primary_key=True, autoincrement=True)
     student_id = Column(Integer, ForeignKey('students.id', ondelete='CASCADE'), nullable=False)
     study_hours = Column(Float)
@@ -84,12 +74,8 @@ class Performance(Base):
     student = relationship("Student", back_populates="performances")
     predictions = relationship("Prediction", back_populates="performance", cascade="all, delete")
 
-# =========================
-# Prediction Model
-# =========================
 class Prediction(Base):
     __tablename__ = "predictions"
-
     id = Column(Integer, primary_key=True, autoincrement=True)
     student_id = Column(Integer, ForeignKey('students.id', ondelete='CASCADE'), nullable=False)
     performance_id = Column(Integer, ForeignKey('performance.id', ondelete='CASCADE'), nullable=False)
@@ -117,21 +103,13 @@ SessionLocal = sessionmaker(
     bind=engine,
 )
 
-# Create tables
 Base.metadata.create_all(bind=engine)
 
 # =========================
 # FastAPI App
 # =========================
 app = FastAPI()
-
-origins = [
-    "http://localhost:8000",
-    "http://localhost:5173",
-    "http://localhost:3000",
-    "http://127.0.0.1:5173",
-]
-
+origins = ["http://localhost:8000", "http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173"]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -149,6 +127,32 @@ def get_db():
         yield db
     finally:
         db.close()
+
+# =========================
+# Utility Functions
+# =========================
+def hash_password(password: str) -> str:
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def verify_password(password: str, hashed: str) -> bool:
+    return hash_password(password) == hashed
+
+otp_store = {}  # Temporary in-memory storage for OTPs
+
+def generate_otp() -> str:
+    return str(random.randint(100000, 999999))
+
+def save_otp(email: str, otp: str):
+    otp_store[email] = otp
+
+def verify_otp(email: str, otp: str):
+    if otp_store.get(email) == otp:
+        del otp_store[email]
+        return "OTP verified successfully"
+    return "Invalid or expired OTP"
+
+def send_email(email: str, otp: str):
+    print(f"[EMAIL] Sent OTP {otp} to {email}")  # Placeholder for real email service
 
 # =========================
 # CRUD Functions
@@ -176,24 +180,84 @@ def update_password(email: str, new_password_hash: str, db: Session):
     return user
 
 # =========================
-# API Endpoints
+# Schemas (Pydantic)
 # =========================
-@app.post("/users/")
-def api_create_user(name: str, email: str, password: str, db: Session = Depends(get_db)):
-    existing_user = get_user_by_email(email, db)
-    if existing_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
-    return create_user(db, name, email, password)
+from pydantic import BaseModel
 
-@app.get("/users/")
-def api_get_users(db: Session = Depends(get_db)):
+class UserRegister(BaseModel):
+    name: str
+    email: str
+    password: str
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
+class EmailRequest(BaseModel):
+    email: str
+
+class ResetPasswordRequest(BaseModel):
+    email: str
+    new_password: str
+
+class VerifyOTPRequest(BaseModel):
+    email: str
+    otp: str
+
+# =========================
+# Router for Auth
+# =========================
+router = APIRouter()
+
+@router.post("/register")
+def add_user(user: UserRegister, db: Session = Depends(get_db)):
+    if get_user_by_email(user.email, db):
+        raise HTTPException(status_code=400, detail="Email already registered")
+    create_user(db, user.name, user.email, hash_password(user.password))
+    return {"message": "User registered successfully."}
+
+@router.get("/users")
+def getUsers(db: Session = Depends(get_db)):
     return get_users(db)
 
-@app.put("/users/{email}/password")
-def api_update_password(email: str, new_password: str, db: Session = Depends(get_db)):
-    user = update_password(email, new_password, db)
-    if not user:
+@router.post("/login")
+def login(user: UserLogin, db: Session = Depends(get_db)):
+    db_user = get_user_by_email(user.email, db)
+    if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
-    return user
+    if verify_password(user.password, db_user.password):
+        return {"message": "Login successful", "user": {"name": db_user.name, "email": db_user.email, "role": db_user.role.value}}
+    raise HTTPException(status_code=401, detail="Invalid password")
+
+@router.post("/send-otp")
+def send_otp_route(request: EmailRequest, db: Session = Depends(get_db)):
+    db_user = get_user_by_email(request.email, db)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="Enter registered email address")
+    otp = generate_otp()
+    save_otp(request.email, otp)
+    send_email(request.email, otp)
+    return {"message": "OTP sent successfully"}
+
+@router.post("/verify-otp")
+def verify_otp_route(request: VerifyOTPRequest):
+    result = verify_otp(request.email, request.otp)
+    if result == "OTP verified successfully":
+        return {"message": result}
+    raise HTTPException(status_code=400, detail=result)
+
+@router.post("/reset-password")
+def reset_password_route(request: ResetPasswordRequest, db: Session = Depends(get_db)):
+    db_user = get_user_by_email(request.email, db)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="Enter registered email address")
+    hashed = hash_password(request.new_password)
+    update_password(db_user.email, hashed, db)
+    return {"message": "Password reset successfully"}
+
+# =========================
+# Include router in app
+# =========================
+app.include_router(router)
 
 print("🔥 APP STARTING...")
