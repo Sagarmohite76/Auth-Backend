@@ -109,7 +109,7 @@ Base.metadata.create_all(bind=engine)
 # FastAPI App
 # =========================
 app = FastAPI()
-origins = ["http://localhost:8000", "http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173","https://auth-frontend-3dnq.onrender.com" ]
+origins = ["http://localhost:8000", "http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173",'http://localhost:5173', 'https://sagarmohite76.github.io']
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -237,7 +237,7 @@ def send_otp_route(request: EmailRequest, db: Session = Depends(get_db)):
     otp = generate_otp()
     save_otp(request.email, otp)
     send_email(request.email, otp)
-    return {"message": "OTP sent successfully"}
+    return {"message": "OTP sent successfully"} 
 
 @router.post("/verify-otp")
 def verify_otp_route(request: VerifyOTPRequest):
