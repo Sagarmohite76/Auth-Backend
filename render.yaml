@@ -1,9 +1,3 @@
-databases:
-  - name: auth-db
-    databaseName: performance
-    user: auth_user
-    plan: free
-
 services:
   - type: web
     name: auth-backend
@@ -12,11 +6,18 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
-      - key: DATABASE_URL
-        fromDatabase:
-          name: auth-db
-          property: connectionString
+      - key: PYTHON_VERSION
+        value: "3.11.10"
+      # ── Set these in the Render dashboard ──────────────────────
+      - key: DB_Host
+        sync: false
+      - key: DB_User
+        sync: false
+      - key: DB_Password
+        sync: false
+      - key: DB_Name
+        sync: false
       - key: Sender_Email
-        sync: false          # set manually in the Render dashboard
+        sync: false
       - key: App_Password
-        sync: false          # set manually in the Render dashboard
+        sync: false
