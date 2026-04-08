@@ -109,7 +109,7 @@ Base.metadata.create_all(bind=engine)
 # FastAPI App
 # =========================
 app = FastAPI()
-origins = ["http://localhost:8000", "http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173"]
+origins = ["http://localhost:8000", "http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173","https://auth-frontend-3dnq.onrender.com" ]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
