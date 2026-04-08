@@ -8,15 +8,8 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: "3.11.10"
-      # ── Set these in the Render dashboard ──────────────────────
-      - key: DB_Host
-        sync: false
-      - key: DB_User
-        sync: false
-      - key: DB_Password
-        sync: false
-      - key: DB_Name
-        sync: false
+      # DATABASE_URL is auto-injected by Render when a Postgres DB is linked
+      # in the dashboard — no need to set it manually.
       - key: Sender_Email
         sync: false
       - key: App_Password

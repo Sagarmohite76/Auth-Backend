@@ -11,7 +11,7 @@ class User(Base):
     name = Column(String(100), nullable=False)
     email = Column(String(150), unique=True, nullable=False, index=True)
     password = Column(String(255), nullable=False)
-    role = Column(Enum("admin", "student"), default="student")
+    role = Column(Enum("admin", "user", name="user_role"))
     created_at = Column(DateTime, default=datetime.utcnow)
     students = relationship(
         "Student",

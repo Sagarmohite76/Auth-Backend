@@ -4,14 +4,10 @@ import os
 load_dotenv()
 
 class Config:
-    DB_HOST     = os.getenv("DB_Host", "localhost").strip()
-    DB_USER     = os.getenv("DB_User", "root").strip()
-    DB_PASSWORD = os.getenv("DB_Password", "").strip()
-    DB_NAME     = os.getenv("DB_Name", "").strip()
-
-    DATABASE_URL = (
-        f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"
-    )
+    # Render injects DATABASE_URL automatically when a Postgres DB is linked.
+    # Normalize postgres:// → postgresql+psycopg2:// for SQLAlchemy compatibility.
+    _raw_url = os.getenv("DATABASE_URL", "").strip()
+    DATABASE_URL = _raw_url.replace("postgres://", "postgresql+psycopg2://", 1)
 
     SENDER_EMAIL = os.getenv("Sender_Email", "").strip()
     APP_PASSWORD  = os.getenv("App_Password", "").strip()
