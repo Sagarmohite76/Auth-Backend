@@ -1,6 +1,6 @@
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI
-from db import engine
+from db.session import engine
 from models import Base
 import db.base
 from api.endpoints import users

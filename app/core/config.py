@@ -10,4 +10,4 @@ class Config:
     DATABASE_URL = _raw_url.replace("postgres://", "postgresql+psycopg2://", 1)
 
     SENDER_EMAIL = os.getenv("Sender_Email", "").strip()
-    APP_PASSWORD  = os.getenv("App_Password", "").strip()
+    APP_PASSWORD  = os.getenv("App_Password", "").strip()
