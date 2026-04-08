@@ -2,6 +2,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from models import Base
+import db.base
+from api.endpoints import users
 from core import Config
 
 engine = create_engine(
@@ -18,9 +21,7 @@ SessionLocal = sessionmaker(
     bind=engine,
 )
 
-from models import Base
-import db.base
-from api.endpoints import users
+
 
 app = FastAPI()
 
