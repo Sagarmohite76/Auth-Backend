@@ -45,3 +45,4 @@ Base.metadata.create_all(bind=engine)
 
 # ── API routes ────────────────────────────────────────────────────────────
 app.include_router(users.router)
+print("🔥 APP STARTING...")
