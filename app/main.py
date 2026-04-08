@@ -2,10 +2,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from .models import base
+from sqlalchemy.orm import declarative_base
 import db.base
 from api.endpoints import users
 from core import Config
+
+Base=declarative_base()
+
 
 engine = create_engine(
     Config.DATABASE_URL,
